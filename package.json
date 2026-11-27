@@ -4,7 +4,7 @@
   "description": "Project using express.js and REST API",
   "main": "dist/server.js",
   "scripts": {
-    "test": "npm run build && node --test tests/*.test.mjs",
+    "test": "npm run build && node --import tsx --test tests/*.test.mjs",
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",

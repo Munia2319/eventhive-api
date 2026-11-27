@@ -3,42 +3,55 @@ import type { ErrorRequestHandler } from "express";
 import { ZodError } from "zod";
 
 import { AppError } from "../errors/app_error";
-import sendResponse from "../utils/sendResponse";
+import sendResponse, { type FieldError } from "../utils/sendResponse";
+
+function isMalformedJsonError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "type" in error &&
+    error.type === "entity.parse.failed"
+  );
+}
 
 //! Centralized error handler
 export const globalErrorHandler: ErrorRequestHandler = (
   err,
-  req,
+  _req,
   res,
-  next
+  _next
 ) => {
-
-  //! Default response for unexpected errors
   let statusCode = 500;
   let message = "Internal Server Error";
-  let errorDetails: unknown;
+  let errors: FieldError[] | undefined;
+  let isUnexpectedError = true;
 
-  //! 1. Handle our custom application errors
   if (err instanceof AppError) {
     statusCode = err.statusCode;
     message = err.message;
-  }
-
-  //! 2. Handle Zod validation errors
-  else if (err instanceof ZodError) {
+    isUnexpectedError = false;
+  } else if (err instanceof ZodError) {
     statusCode = 400;
-    message = "Validation failed";
-    errorDetails = err.issues;
+    message = "Validation Error";
+    errors = err.issues.map((issue) => ({
+      field: issue.path.map(String).join(".") || "body",
+      message: issue.message,
+    }));
+    isUnexpectedError = false;
+  } else if (isMalformedJsonError(err)) {
+    statusCode = 400;
+    message = "Invalid JSON request body";
+    isUnexpectedError = false;
   }
 
-  //! Log the actual error for debugging
-  console.error(err);
+  if (isUnexpectedError) {
+    console.error(err);
+  }
 
-  //! Send a consistent response to the client
   return sendResponse(res, {
     statusCode,
     success: false,
     message,
-    error: errorDetails,
+    ...(errors ? { errors } : {}),
   });
 };
