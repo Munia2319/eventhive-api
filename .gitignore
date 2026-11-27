@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.env
+coverage
+*.log
+.vscode/
+src/errors/
+src/middlewares/validateRequest.ts
+src/modules/
+src/types/
+tests/
+eventhive-assignment-implementation-guide.txt
+notes/
+
